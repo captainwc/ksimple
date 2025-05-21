@@ -63,6 +63,10 @@
             configItems.push(`skin {{ . }}`);
         {{ end }}
 
+        {{ if .Site.Params.plantumlBackgroundTransparent }}
+            configItems.push(`skinparam BackgroundColor transparent`);
+        {{ end }}
+
         {{ $shadowParam := .Site.Params.plantumlAddSkinShadowing | default false }}
         {{ if eq (printf "%T" $shadowParam) "bool" }}
             {{ if $shadowParam }}
@@ -78,9 +82,8 @@
             {{ end }}
         {{ end }}
 
-        {{ if .Site.Params.plantumlBackgroundTransparent }}
+        {{ if .Site.Params.plantumlUseWhiteBlock }}
             configItems.push(`
-skinparam BackgroundColor transparent
 skinparam UsecaseBackgroundColor #white
 skinparam classBackgroundColor #white
 skinparam ActivityBackgroundColor #white

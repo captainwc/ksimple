@@ -35,7 +35,8 @@ params:
   ## [[🛠️]] Plantuml Style Config
   plantumlDefaultScale: "5" # A larger scale value can make the generated SVG clearer.
   plantumlDefaultSkin: "" # Skin: 'plantuml' 'rose'
-  plantumlBackgroundTransparent: true # The generated SVG uses a transparent background and a lot of white color tones (with some presets already in place).
+  plantumlBackgroundTransparent: true # Make pic background transparent
+  plantumlUseWhiteBlock: true # Set the color of most elements to white to achieve a grayish-white tone (A collection of skinparam presets).
   plantumlAddSkinShadowing: false # Whether to add shadows to the images.
   plantumlCustomParam: "" # Any other params you want add to your every plantuml header (Use plantuml's syntax)
 
