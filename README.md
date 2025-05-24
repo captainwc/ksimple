@@ -1,12 +1,12 @@
-# KSimple
+# Hugo-KSimple
 
 [站点样式](https://captainwc.github.io)
 
 [文章样式](https://captainwc.github.io/%E6%B5%8B%E8%AF%95/markdown-demo/)
 
-Ksimple 是在 [hugo-xmin](https://github.com/yihui/hugo-xmin) 基础上修改而来一个 hugo 主题，加入了目录、mermaid/plantuml等代码渲染图片、代码块高亮复制折叠、模糊查找、评论系统以及其他各类元素样式定制，整体风格力求简约而实用。
+Ksimple 是在 [hugo-xmin](https://github.com/yihui/hugo-xmin) 基础上修改而来一个 ==hugo 主题==，加入了目录、mermaid/plantuml等代码渲染图片、代码块高亮复制折叠、模糊查找、评论系统以及其他各类元素样式定制，整体风格力求简约而实用。
 
-包含了一些个人化的东西没有剔除，暂时没有单独发布的打算。真看得上的话可以直接下载本文件夹到你的主题文件夹中，并随意修改。
+~~包含了一些个人化的东西没有剔除，暂时没有单独发布的打算。~~ 真看得上的话可以 ~~直接下载本文件夹到你的主题文件夹中，并~~ 随意修改。
 
 > [!note]
 > - 项目整体从 [hugo-xmin](https://github.com/yihui/hugo-xmin) 基础上发展而来，做了很多修改和拓展，保留了导航栏、文章头部以及页脚的样式
