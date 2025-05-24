@@ -22,3 +22,18 @@ Ksimple 是在 [hugo-xmin](https://github.com/yihui/hugo-xmin) 基础上修改�
 > - 使用 fuse.js 实现模糊查找
 
 向以上项目表示感谢！
+
+## Usage
+
+```bash
+# 1. cd to your site root
+cd [Your Site Root]
+# 2. clone ksimple to your themes folder
+## use ssh
+git submodule add git@github.com:captainwc/ksimple.git themes/ksimple
+## use https
+git submodule add https://github.com/captainwc/ksimple.git themes/ksimple
+# 3. config your hugo.yaml/hugo.toml like:
+theme: ["ksimple"]
+## ref: https://github.com/captainwc/captainwc.github.io/blob/main/hugo.yaml
+```
