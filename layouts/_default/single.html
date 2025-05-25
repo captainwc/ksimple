@@ -52,6 +52,7 @@
 
 <main>
 
+    {{ partial "left-sidebar.html" . }}
     {{ partial "toc.html" . }}
 
     <!-- {{ .Content }} -->
@@ -61,31 +62,59 @@
 </main>
 
 <style>
-/* 文章元信息块 */
-.article-meta {
-    text-align: center;
-    text-decoration: none;
-    background: #efefef;
-    padding: 1px;
-    border-radius: 5px;
-}
+    {{ if not .Site.Params.ksimpleUseFloatLeftSideBar }}
 
-.article-meta-title {
-    font-size: 1em;
-}
+    body {
+        margin-left: 300px;
+    }
 
-.article-meta-info {
-    color: #666;
-    font-size: 0.9rem;
-    margin: -0.6rem 0 0.2rem 10px;
-    text-align: left;
-}
+    @media (max-width: 768px) {
+        body {
+            margin-left: 0;
+        }
+    }
 
-.article-meta-info a {
-    color: inherit;
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
+    {{ end }}
+
+    {{ if not .Site.Params.ksimpleUseFloatTo }}
+
+    body {
+        margin-right: 280px;
+    }
+
+    @media (max-width: 768px) {
+        body {
+            margin-right: 0;
+        }
+    }
+
+    {{ end }}
+
+    /* 文章元信息块 */
+    .article-meta {
+        text-align: center;
+        text-decoration: none;
+        background: #efefef;
+        padding: 1px;
+        border-radius: 5px;
+    }
+
+    .article-meta-title {
+        font-size: 1em;
+    }
+
+    .article-meta-info {
+        color: #666;
+        font-size: 0.9rem;
+        margin: -0.6rem 0 0.2rem 10px;
+        text-align: left;
+    }
+
+    .article-meta-info a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
 </style>
 
 {{ partial "comment.html" . }}

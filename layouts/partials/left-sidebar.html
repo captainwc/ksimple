@@ -1,0 +1,327 @@
+{{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+<!-- 浮动模式 -->
+<div class="left-sidebar-btn" id="leftSidebarBtn"><i class="fa-solid fa-list"></i></div>
+<div class="left-sidebar-panel" id="leftSidebarPanel">
+    {{ else }}
+    <!-- 嵌入模式 -->
+    <div class="left-sidebar">
+        {{ end }}
+        <div class="sidebar-content">
+            <!-- 当前文章的标签 -->
+            {{ with .Params.tags }}
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">🏷️ 标签</div>
+                <div class="tag-blocks">
+                    {{ range . }}
+                    <a href="{{ "tags/" | relLangURL }}{{ . | urlize }}" class="tag-block">
+                        {{ . }}
+                    </a>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+
+            <!-- 当前文章所属系列的其他文章 -->
+            {{ with .Params.series }}
+            {{ $currentSeries := . }}
+            {{ $currentPage := $ }}
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">🎖️ 系列文章</div>
+                {{ range $currentSeries }}
+                {{ $seriesName := . }}
+                <div class="series-group">
+                    <div class="series-name">{{ $seriesName }}</div>
+                    <ul class="article-list">
+                        {{ range where $currentPage.Site.RegularPages "Params.series" "intersect" (slice $seriesName) }}
+                        {{ if ne .RelPermalink $currentPage.RelPermalink }}
+                        <li class="article-item">
+                            <a href="{{ .RelPermalink }}" class="article-link">
+                                <!-- <span class="article-date">{{ .Date.Format "01/02" }}</span> -->
+                                <span class="article-title">{{ .Title | plainify }}</span>
+                            </a>
+                        </li>
+                        {{ end }}
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
+            </div>
+            {{ end }}
+
+            <!-- 当前文章所属分类的其他文章 -->
+            {{ with .Params.categories }}
+            {{ $currentCategories := . }}
+            {{ $currentPage := $ }}
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">🗂️ 分类文章</div>
+                {{ range $currentCategories }}
+                {{ $categoryName := . }}
+                <div class="category-group">
+                    <div class="category-name">{{ $categoryName }}</div>
+                    <ul class="article-list">
+                        {{ range first 8 (where $currentPage.Site.RegularPages "Params.categories" "intersect" (slice
+                        $categoryName)) }}
+                        {{ if ne .RelPermalink $currentPage.RelPermalink }}
+                        <li class="article-item">
+                            <a href="{{ .RelPermalink }}" class="article-link">
+                                <!-- <span class="article-date">{{ .Date.Format "01/02" }}</span> -->
+                                <span class="article-title">{{ .Title | plainify }}</span>
+                            </a>
+                        </li>
+                        {{ end }}
+                        {{ end }}
+                    </ul>
+                </div>
+                {{ end }}
+            </div>
+            {{ end }}
+        </div>
+    </div>
+
+    {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('leftSidebarBtn');
+            const panel = document.getElementById('leftSidebarPanel');
+            let hoverTimeout;
+
+            // 悬停交互逻辑
+            btn.addEventListener('mouseenter', () => {
+                clearTimeout(hoverTimeout);
+                panel.classList.add('show');
+            });
+
+            panel.addEventListener('mouseenter', () => clearTimeout(hoverTimeout));
+
+            [btn, panel].forEach(el => {
+                el.addEventListener('mouseleave', () => {
+                    hoverTimeout = setTimeout(() => {
+                        panel.classList.remove('show');
+                    }, 200);
+                });
+            });
+        });
+    </script>
+    {{ end }}
+
+    <style>
+        {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+
+        /* 浮动模式样式 */
+        .left-sidebar-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 980;
+            cursor: pointer;
+            padding: 6px 10px;
+            background: #EFEFEF;
+            border-radius: 8px;
+            transition: background 0.3s;
+            color: #999;
+            opacity: 0.7;
+        }
+
+        .left-sidebar-btn:hover {
+            background: #BEC2B3;
+        }
+
+        .left-sidebar-panel {
+            border-radius: 8px;
+            display: none;
+            position: fixed;
+            top: 66px;
+            left: 20px;
+            max-width: 360px;
+            min-width: 280px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #eee;
+            padding: 10px 5px 10px 15px;
+            z-index: 970;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-sidebar-panel.show {
+            display: block;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        {{ else }}
+
+        /* 嵌入模式样式 */
+        .left-sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: transparent;
+            z-index: 960;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        {{ end }}
+
+        .sidebar-content {
+            padding: 15px 12px;
+        }
+
+        .sidebar-section {
+            margin-bottom: 1.2rem;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.95rem;
+            color: #2d3842;
+            margin: 0 0 0.6rem 0;
+            padding-bottom: 0.3rem;
+            border-bottom: 2px dashed #cfcfcf;
+            font-family: "LXGW WenKai";
+            font-weight: bold;
+        }
+
+        /* 标签块样式 */
+        .tag-blocks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .tag-block {
+            display: inline-block;
+            background: #F6F6F6;
+            color: #666;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            border: 1px solid #e0e0e0;
+        }
+
+        .tag-block:hover {
+            background: #2e59a7;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* 系列和分类组样式 */
+        .series-group,
+        .category-group {
+            margin-bottom: 0.8rem;
+        }
+
+        .series-name,
+        .category-name {
+            font-size: 0.85rem;
+            color: #666;
+            margin: 0 0 0.4rem 0;
+            font-weight: bold;
+            font-family: "LXGW WenKai";
+        }
+
+        /* 文章列表样式 */
+        .article-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .article-item {
+            margin-bottom: 0.3rem;
+        }
+
+        .article-link {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.4rem;
+            border-radius: 4px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .article-link:hover {
+            background: #f8f9fa;
+            border-left-color: #2e59a7;
+            transform: translateX(3px);
+        }
+
+        .article-date {
+            font-size: 0.7rem;
+            color: #999;
+            font-family: "LXGW WenKai";
+            flex-shrink: 0;
+            width: 45px;
+            text-align: left;
+        }
+
+        .article-title {
+            flex: 1;
+            font-size: 0.8rem;
+            line-height: 1.2;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* 隐藏滚动条 */
+        {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+
+        .left-sidebar-panel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .left-sidebar-panel {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        {{ else }}
+
+        .left-sidebar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .left-sidebar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        {{ end }}
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+        {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+
+            .left-sidebar-btn,
+            .left-sidebar-panel {
+                display: none;
+            }
+
+        {{ else }}
+
+            .left-sidebar {
+                display: none;
+            }
+
+        {{ end }}
+        }
+    </style>
