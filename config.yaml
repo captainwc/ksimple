@@ -46,6 +46,7 @@ params:
   ksimpleUsePrismJs: false # Use highlight.js(Recommended) or prism.js to highlight your code
   ksimpleUseFloatLeftSideBar: false # Control whether the left sidebar is displayed as a floating window (true) or embedded in the webpage (false)
   ksimpleUseFloatToc: true # Control whether the table of contents is displayed as a floating window (true) or embedded in the webpage (false)
+  ksimpleUseEmbedScrollSync: true # Enable automatic scrolling synchronization for embedded TOC to keep current section centered (only works when ksimpleUseFloatToc is false)
 
 ## taxonomies
 taxonomies:

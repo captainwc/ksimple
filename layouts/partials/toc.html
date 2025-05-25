@@ -69,6 +69,66 @@
         // 嵌入模式逻辑
         const embedded = document.getElementById('tocEmbedded');
         generateToc(embedded);
+
+        {{ if .Site.Params.ksimpleUseEmbedScrollSync }}
+        // 滚动同步功能
+        let isScrolling = false;
+
+        function updateActiveTocItem() {
+            if (isScrolling) return;
+
+            const headers = Array.from(document.querySelectorAll('h2, h3, h4, h5, h6'));
+            const tocLinks = Array.from(embedded.querySelectorAll('a'));
+
+            // 清除所有激活状态
+            tocLinks.forEach(link => link.classList.remove('toc-active'));
+
+            let activeHeader = null;
+            let minDistance = Infinity;
+
+            // 寻找离视口顶部最近的标题
+            headers.forEach(header => {
+                const rect = header.getBoundingClientRect();
+                const distance = Math.abs(rect.top - 100); // 考虑一些偏移
+                if (rect.top <= 150 && distance < minDistance) {
+                    minDistance = distance;
+                    activeHeader = header;
+                }
+            });
+
+            if (activeHeader) {
+                const activeLink = embedded.querySelector(`a[href="#${activeHeader.id}"]`);
+                if (activeLink) {
+                    activeLink.classList.add('toc-active');
+
+                    // 滚动到中间位置
+                    isScrolling = true;
+                    const embeddedHeight = embedded.offsetHeight;
+                    const linkOffset = activeLink.offsetTop;
+                    const centerPosition = linkOffset - (embeddedHeight / 2) + (activeLink.offsetHeight / 2);
+
+                    embedded.scrollTo({
+                        top: centerPosition,
+                        behavior: 'smooth'
+                    });
+
+                    setTimeout(() => {
+                        isScrolling = false;
+                    }, 500);
+                }
+            }
+        }
+
+        // 监听页面滚动
+        let scrollTimeout;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(updateActiveTocItem, 50);
+        });
+
+        // 初始化激活状态
+        setTimeout(updateActiveTocItem, 100);
+        {{ end }}
         {{ end }}
 
         // 生成目录核心函数
@@ -164,7 +224,7 @@
         }
     }
 
-        {{ else }}
+    {{ else }}
 
     /* 嵌入模式样式 */
     .toc-embedded {
@@ -177,7 +237,7 @@
         z-index: 960;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 15px 12px;
+        padding: 15px 12px 30px 12px;
         font-size: 0.8rem;
     }
 
@@ -221,13 +281,26 @@
             white-space: nowrap;
         }
 
-        {{ if .Site.Params.ksimpleUseFloatTo }}
+        {{ if .Site.Params.ksimpleUseFloatToc }}
 
         .toc-panel a:hover {
         {{ else }}
 
-        .toc-embedded a:hover {
-        {{end }}
-            color: #007bff;
-        }
+            .toc-embedded a:hover {
+        {{ end }}
+
+                color: #007bff;
+            }
+
+        {{ if not .Site.Params.ksimpleUseFloatToc }}
+
+            /* 激活状态样式（仅嵌入模式） */
+            .toc-embedded a.toc-active {
+                background-color: #f5f5f5;
+                color: #333;
+                border-radius: 4px;
+                transition: background-color 0.3s ease;
+            }
+
+        {{ end }}
 </style>
