@@ -241,6 +241,13 @@
         font-size: 0.8rem;
     }
 
+    /*最下面填充空白防止"滚动不到底"*/
+    .toc-embedded::after {
+        content: '';
+        display: block;
+        height: 36px;
+    }
+
     .toc-embedded::-webkit-scrollbar {
         display: none;
     }
