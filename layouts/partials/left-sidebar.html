@@ -307,21 +307,12 @@
 
         {{ end }}
 
-        /* 响应式设计 */
+        /* 移动端不显示嵌入目录 */
         @media (max-width: 768px) {
-        {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
-
-            .left-sidebar-btn,
-            .left-sidebar-panel {
-                display: none;
-            }
-
-        {{ else }}
-
+        {{ if not .Site.Params.ksimpleUseFloatLeftSideBar }}
             .left-sidebar {
                 display: none;
             }
-
         {{ end }}
         }
     </style>
