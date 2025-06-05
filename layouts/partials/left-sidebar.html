@@ -190,9 +190,13 @@
             color: #2d3842;
             margin: 0 0 0.6rem 0;
             padding-bottom: 0.3rem;
-            border-bottom: 2px dashed #cfcfcf;
             font-family: "LXGW WenKai";
             font-weight: bold;
+
+            /* 只在浮动窗口时添加分割线 */
+            {{ if .Site.Params.ksimpleUseFloatLeftSideBar }}
+            border-bottom: 2px dashed #cfcfcf;
+            {{ end }}
         }
 
         /* 标签块样式 */
