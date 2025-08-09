@@ -3,21 +3,151 @@
 <h1>{{ .Title | markdownify }}</h1>
 {{ .Content }}
 
-<!-- <hr> -->
-
-文章列表：
-
-<ul class="home-page-blog-list">
-    {{ $pages := .Pages }}
-    {{ if .IsHome }}{{ $pages = .Site.RegularPages }}{{ end }}
-    {{ range (where $pages "Section" "!=" "") }}
-    <li>
-        <div style="display: flex; align-items: center; margin: 0 0 -0.4rem 0;">
-            <span style="text-wrap: nowrap; margin-right: 0.36rem">{{ .Date.Format "2006/01/02" }}</span>
-            <a href="{{ .RelPermalink }}">{{ .Title | markdownify }}</a>
-        </div>
-    </li>
+<div class="timeline-container">
+    {{ $pages := where .Site.RegularPages "Section" "!=" "" }}
+    {{/* 按年份对文章进行分组 */}}
+    {{ range $pages.GroupByDate "2006" }}
+    <div class="timeline-year-section">
+        <h2 class="timeline-year">{{ .Key }}</h2>
+        <ul class="timeline-list">
+            {{/* 遍历该年份下的所有文章 */}}
+            {{ range .Pages }}
+            <li class="timeline-item">
+                <div class="timeline-content">
+                    <span class="timeline-date">{{ .Date.Format "01-02" }}</span>
+                    <a href="{{ .RelPermalink }}" class="timeline-title">{{ .Title | markdownify }}</a>
+                </div>
+            </li>
+            {{ end }}
+        </ul>
+    </div>
     {{ end }}
-</ul>
+</div>
+
+
+<!-- 页面专属CSS -->
+<style>
+    .home-content {
+        margin-bottom: 2rem;
+    }
+
+    .timeline-container {
+        max-width: 800px;
+        margin: 0 0 1.5rem 0;
+        padding: 0;
+    }
+
+    .timeline-year {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #333;
+        padding-bottom: 0.4rem;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .timeline-year::before {
+        content: "" !important;
+    }
+
+    .timeline-list {
+        list-style: none;
+        padding-left: 20px;
+        position: relative;
+        border-left: 2px solid #e9e9e9;
+    }
+
+    .timeline-item {
+        margin-bottom: 0.2rem;
+        position: relative;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -27px;
+        top: 5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #fff;
+        border: 2px solid #c0c0c0;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+        z-index: 1;
+    }
+
+    .timeline-item:hover::before {
+        background-color: #2e59a7;
+        border-color: #2e59a7;
+    }
+
+    .timeline-content {
+        display: flex;
+        align-items: baseline;
+        gap: 0.6rem;
+    }
+
+    .timeline-date {
+        font-family: "Maple Mono NF CN", "Fira Code", Consolas, monospace;
+        font-size: 0.8rem;
+        color: #888;
+        background-color: #f8f8f8;
+        padding: 1px 6px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+
+    .timeline-title {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #3c4654;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .timeline-title:hover {
+        color: #2e59a7;
+    }
+
+    .timeline-title::before {
+        display: none !important;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+        .timeline-container {
+            margin: 1rem auto;
+            padding: 0;
+        }
+
+        .timeline-year {
+            font-size: 1.5rem;
+            padding-left: 0.5rem;
+        }
+
+        .timeline-list {
+            border-left: none;
+            padding-left: 0.5rem;
+        }
+
+        .timeline-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.25rem;
+            padding-left: 1.5rem;
+            border-left: 2px solid #e9e9e9;
+        }
+
+        .timeline-item {
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-item::before {
+            left: -7px;
+            top: 4px;
+        }
+    }
+</style>
+
 
 {{ partial "footer.html" . }}
