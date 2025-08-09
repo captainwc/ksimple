@@ -1,5 +1,63 @@
 {{ partial "header.html" . }}
 
-404 NOT FOUND
+<div class="not-found-container">
+    <h1 class="not-found-title">404</h1>
+    <p class="not-found-message">哎呀，页面迷路了... (っ °Д °;)っ</p>
+    <a href="{{ "/" | relLangURL }}" class="back-home-button">返回首页</a>
+</div>
+
+<!-- 页面专属CSS -->
+<style>
+    .not-found-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        min-height: 50vh;
+        padding: 2rem;
+    }
+
+    .not-found-title {
+        font-size: 13rem;
+        font-weight: bold;
+        color: #f0f0f0;
+        margin: 0;
+        line-height: 1;
+    }
+
+    .not-found-message {
+        font-size: 1.5rem;
+        color: #555;
+        margin-top: 1rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .back-home-button {
+        background: #efefef;
+        color: black !important;
+        padding: 12px 24px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.2s ease;
+        border: 1px solid #ddd;
+    }
+
+    .back-home-button:hover {
+        background: #2e59a7;
+        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .back-home-button::before {
+        display: none !important;
+    }
+
+    .not-found-title::before {
+        content: "" !important;
+    }
+</style>
 
 {{ partial "footer.html" . }}
