@@ -1,0 +1,536 @@
+<div class="heatmap-container" id="heatmap-container">
+    <!-- 头部区域：包含标题和年份选择器 -->
+    <div class="heatmap-header">
+        <div class="heatmap-title">Contributions</div>
+        <div class="heatmap-year-selector" id="heatmap-year-selector"></div>
+    </div>
+
+    <!-- 主体内容区域 -->
+    <div class="heatmap-content-wrapper">
+        <!-- 月份标签容器，由 JS 动态填充 -->
+        <div class="heatmap-months" id="heatmap-months"></div>
+        <div class="heatmap-body">
+            <!-- 星期标签 (侧边栏) -->
+            <div class="heatmap-weekdays">
+                <span>Tue</span>
+                <span>Thr</span>
+                <span>Sat</span>
+            </div>
+            <!-- 热力图网格容器，由 JS 动态填充 -->
+            <div class="heatmap-grid" id="heatmap-grid"></div>
+        </div>
+    </div>
+
+    <!-- 底部区域：包含图例 -->
+    <div class="heatmap-footer">
+        <span>Less</span>
+        <div class="heatmap-legend">
+            <div class="heatmap-day" style="background-color: var(--ht-lv-0);"></div>
+            <div class="heatmap-day" style="background-color: var(--ht-lv-1);"></div>
+            <div class="heatmap-day" style="background-color: var(--ht-lv-2);"></div>
+            <div class="heatmap-day" style="background-color: var(--ht-lv-3);"></div>
+            <div class="heatmap-day" style="background-color: var(--ht-lv-4);"></div>
+        </div>
+        <span>More</span>
+    </div>
+
+    <!-- 悬浮提示框 (Tooltip)，初始隐藏 -->
+    <div id="heatmap-tooltip" class="heatmap-tooltip"></div>
+</div>
+
+<style>
+    :root {
+        /* --- 颜色变量定义 --- */
+        /* 基础颜色 */
+        --ht-main-text: #24292f;
+        --ht-secondary-text: #586069;
+        --ht-border: rgba(27, 31, 35, 0.1);
+        --ht-bg: #fff;
+        --ht-btn-bg: #f6f8fa;
+        --ht-btn-hover-bg: #f3f4f6;
+        --ht-btn-active-bg: #e1e4e8;
+        --ht-btn-active-border: #a0a5ab;
+
+        /* 贡献等级颜色 - 浅色模式 */
+        --ht-lv-0: #ebedf0;
+        --ht-lv-1: #9be9a8;
+        --ht-lv-2: #40c463;
+        --ht-lv-3: #30a14e;
+        --ht-lv-4: #216e39;
+
+        /* Tooltip 颜色 */
+        --ht-tooltip-bg: #24292f;
+        --ht-tooltip-text: #fff;
+
+        /* 尺寸变量 */
+        --day-size: 12px;
+        --day-gap: 3px;
+    }
+
+    /* --- 暗色模式适配 --- */
+    body.dark {
+        --ht-main-text: #c9d1d9;
+        --ht-secondary-text: #8b949e;
+        --ht-border: #30363d;
+        --ht-bg: #0d1117;
+        --ht-btn-bg: #21262d;
+        --ht-btn-hover-bg: #30363d;
+        --ht-btn-active-bg: #383e47;
+        --ht-btn-active-border: #6e7681;
+
+        /* 贡献等级颜色 - 暗色模式 */
+        --ht-lv-0: #161b22;
+        --ht-lv-1: #0e4429;
+        --ht-lv-2: #006d32;
+        --ht-lv-3: #26a641;
+        --ht-lv-4: #39d353;
+    }
+
+    /* --- 容器和布局 --- */
+    .heatmap-container {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+        padding: 15px;
+        border: 1px solid var(--ht-border);
+        border-radius: 6px;
+        background-color: var(--ht-bg);
+        color: var(--ht-main-text);
+        margin: 1.5rem 0;
+        overflow-x: auto;
+        /* 允许在小屏幕上横向滚动 */
+    }
+
+    .heatmap-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-left: 32px;
+        /* 与星期标签对齐 */
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+
+    .heatmap-title {
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .heatmap-year-selector {
+        display: flex;
+        gap: 4px;
+    }
+
+    /* --- 年份选择按钮 --- */
+    .year-btn {
+        padding: 3px 10px;
+        font-size: 12px;
+        color: var(--ht-secondary-text);
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .year-btn:hover {
+        background-color: var(--ht-btn-hover-bg);
+        color: var(--ht-main-text);
+    }
+
+    .year-btn.active {
+        color: var(--ht-main-text);
+        font-weight: 600;
+        background-color: var(--ht-btn-bg);
+        border-color: var(--ht-btn-active-border);
+    }
+
+    /* --- 主体网格布局 --- */
+    .heatmap-content-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .heatmap-months {
+        display: flex;
+        font-size: 12px;
+        color: var(--ht-secondary-text);
+        margin-left: 32px;
+        /* 与星期标签对齐 */
+        margin-bottom: 5px;
+    }
+
+    .heatmap-month-label {
+        text-align: center;
+        flex-basis: 0;
+        /* 允许 flex-grow 生效 */
+    }
+
+    .heatmap-body {
+        display: flex;
+    }
+
+    .heatmap-weekdays {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding-right: 8px;
+        padding-top: 12px;
+        padding-bottom: 19px;
+        /* 微调以实现垂直对齐 */
+        font-size: 12px;
+        color: var(--ht-secondary-text);
+        flex-shrink: 0;
+    }
+
+    .heatmap-weekdays span {
+        height: var(--day-size);
+    }
+
+    .heatmap-grid {
+        display: flex;
+        /* 关键布局：列方向优先，自动换行，实现从上到下、从左到右的排列 */
+        flex-flow: column wrap;
+        /* 高度固定为7天的高度，确保每周7个格子 */
+        height: calc(7 * (var(--day-size) + var(--day-gap)) - var(--day-gap));
+        gap: var(--day-gap);
+        flex-grow: 1;
+    }
+
+    .heatmap-day {
+        width: var(--day-size);
+        height: var(--day-size);
+        background-color: var(--ht-lv-0);
+        border-radius: 3px;
+        outline: 1px solid rgba(27, 31, 35, 0.05);
+        outline-offset: -1px;
+        cursor: pointer;
+    }
+
+    body.dark .heatmap-day {
+        outline-color: rgba(255, 255, 255, 0.05);
+        /* 适配暗色模式的边框 */
+    }
+
+    /* --- 底部和图例 --- */
+    .heatmap-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--ht-secondary-text);
+    }
+
+    .heatmap-legend {
+        display: flex;
+        gap: 3px;
+        margin: 0 5px;
+    }
+
+    /* --- 悬浮提示框 (Tooltip) --- */
+    .heatmap-tooltip {
+        position: fixed;
+        /* 固定定位，相对于视口 */
+        background-color: var(--ht-tooltip-bg);
+        color: var(--ht-tooltip-text);
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        pointer-events: none;
+        /* 避免遮挡鼠标事件 */
+        z-index: 999;
+        white-space: nowrap;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        opacity: 0;
+        transition: opacity 0.2s;
+        /* 淡入淡出效果 */
+        display: none;
+        /* 由 JS 控制显示 */
+    }
+
+    .heatmap-tooltip.show {
+        opacity: 1;
+    }
+
+    .heatmap-tooltip .tooltip-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .heatmap-tooltip .titles {
+        font-weight: normal;
+        color: #b1b1b1;
+        white-space: pre-wrap;
+        /* 允许标题列表换行 */
+        border-top: 1px solid #555;
+        padding-top: 4px;
+        margin-top: 4px;
+        max-height: 150px;
+        /* 限制最大高度，超出则滚动 */
+        overflow-y: auto;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. --- 数据准备 ---
+        // 通过 Hugo 模板语法，在构建时将所有文章数据注入到 JS 数组中
+        {{ $pages := .Site.RegularPages }}
+        const pages = [
+            {{ range $pages }}
+                {
+                    date: "{{ .Date.Format "2006-01-02" }}",
+                    title: {{ .Title | jsonify }},
+                    word_count: {{ .WordCount }}
+                },
+            {{ end }}
+        ];
+
+    // 将文章数据按日期聚合，计算每天的文章数、总字数和标题列表
+    const contributions = pages.reduce((acc, page) => {
+        const date = page.date;
+        if (!acc[date]) {
+            acc[date] = { posts: 0, words: 0, titles: [] };
+        }
+        acc[date].posts += 1;
+        acc[date].words += page.word_count;
+        acc[date].titles.push(page.title);
+        return acc;
+    }, {});
+
+    // 2. --- DOM 元素获取 ---
+    const grid = document.getElementById('heatmap-grid');
+    const tooltip = document.getElementById('heatmap-tooltip');
+    const monthsContainer = document.getElementById('heatmap-months');
+    const yearSelectorContainer = document.getElementById('heatmap-year-selector');
+
+    /**
+     * 根据当天的总字数计算贡献等级
+     * @param {number} words - 当天总字数
+     * @returns {number} - 返回 0-4 的等级，用于匹配 CSS 颜色
+     */
+    function getLevel(words) {
+        if (words > 0 && words < 1000) return 1;
+        if (words >= 1000 && words < 2000) return 2;
+        if (words >= 2000 && words < 3000) return 3;
+        if (words >= 3000) return 4;
+        return 0;
+    }
+
+    /**
+     * 渲染指定年份的热力图
+     * @param {string|number} year - "last" 代表最近一年, 数字代表具体年份
+     */
+    function renderHeatmap(year) {
+        // 清空旧的网格和月份标签
+        grid.innerHTML = '';
+        monthsContainer.innerHTML = '';
+
+        // 根据传入的年份，计算热力图的起始和结束日期
+        let startDate, endDate;
+        const today = new Date();
+        if (year === 'last') {
+            endDate = new Date(today);
+            startDate = new Date(today);
+            startDate.setFullYear(startDate.getFullYear() - 1);
+        } else {
+            const yearNum = parseInt(year);
+            startDate = new Date(yearNum, 0, 1);
+            endDate = new Date(yearNum, 11, 31);
+            // 如果是今年，则结束日期为今天
+            if (yearNum === today.getFullYear()) {
+                endDate = today;
+            }
+        }
+
+        // --- 网格对齐处理 ---
+        // 将日期光标 `dayCursor` 调整到起始日所在周的周一，以确保网格从周一开始
+        let dayCursor = new Date(startDate);
+        const startDay = dayCursor.getDay(); // (周日=0, 周一=1, ...)
+        const offset = (startDay === 0) ? 6 : startDay - 1;
+        dayCursor.setDate(dayCursor.getDate() - offset);
+
+        // 确保结束日期 `finalDate` 之后有足够的格子来填满最后一周（直到周日）
+        const finalDate = new Date(endDate);
+        const finalDay = finalDate.getDay();
+        const padding = (finalDay === 0) ? 0 : 7 - finalDay;
+        finalDate.setDate(finalDate.getDate() + padding);
+
+        // --- 渲染循环 ---
+        const monthLabelData = [];
+        let currentMonth = -1;
+        let totalWeeks = 0;
+
+        while (dayCursor <= finalDate) {
+            // 在每周一（新的一列开始时）检查是否需要生成月份标签
+            if (dayCursor.getDay() === 1) {
+                totalWeeks++;
+                const month = dayCursor.getMonth();
+                if (month !== currentMonth) {
+                    if (dayCursor >= startDate && dayCursor <= endDate) {
+                        monthLabelData.push({ month: month, weekIndex: totalWeeks });
+                    }
+                    currentMonth = month;
+                }
+            }
+
+            const dayCell = document.createElement('div');
+            dayCell.className = 'heatmap-day';
+
+            // 只为在日期范围内的格子添加数据和样式
+            if (dayCursor >= startDate && dayCursor <= endDate) {
+                const dateString = dayCursor.toISOString().split('T')[0];
+                const data = contributions[dateString];
+
+                if (data) {
+                    const level = getLevel(data.words);
+                    dayCell.style.backgroundColor = `var(--ht-lv-${level})`;
+                    // 将数据存储在 `data-*` 属性中，供 tooltip 使用
+                    dayCell.dataset.date = dateString;
+                    dayCell.dataset.posts = data.posts;
+                    dayCell.dataset.words = data.words;
+                    dayCell.dataset.titles = data.titles.map(t => `《${t}》`).join('\n');
+                }
+            } else {
+                // 日期范围外的格子设为透明，无交互
+                dayCell.style.backgroundColor = 'transparent';
+                dayCell.style.outline = 'none';
+                dayCell.style.cursor = 'default';
+            }
+
+            grid.appendChild(dayCell);
+            dayCursor.setDate(dayCursor.getDate() + 1);
+        }
+
+        // --- 渲染月份标签 ---
+        for (let i = 0; i < monthLabelData.length; i++) {
+            const data = monthLabelData[i];
+            const nextData = monthLabelData[i + 1];
+            const monthLabel = document.createElement('span');
+            monthLabel.className = 'heatmap-month-label';
+            monthLabel.textContent = new Date(2000, data.month).toLocaleString('en-US', { month: 'short' });
+
+            // 计算每个月份标签应该占据的周数（列数）
+            const weeks = nextData ? nextData.weekIndex - data.weekIndex : totalWeeks - data.weekIndex + 1;
+            monthLabel.style.flexGrow = weeks;
+
+            monthsContainer.appendChild(monthLabel);
+        }
+    }
+
+    /**
+     * 设置年份选择器
+     */
+    function setupYearSelector() {
+        if (pages.length === 0) return;
+
+        const currentYear = new Date().getFullYear();
+        // 从所有文章中提取出唯一的年份
+        const yearsSet = new Set(pages.map(p => new Date(p.date).getFullYear()));
+
+        // 过滤掉无效年份和当年，并降序排列
+        const years = Array.from(yearsSet)
+            .filter(y => y > 1970 && y < currentYear)
+            .sort((a, b) => b - a);
+
+        // 创建 "Last year" 按钮
+        const lastYearBtn = document.createElement('button');
+        lastYearBtn.textContent = 'Last year';
+        lastYearBtn.className = 'year-btn active';
+        lastYearBtn.dataset.year = 'last';
+        yearSelectorContainer.appendChild(lastYearBtn);
+
+        // 为每个历史年份创建按钮
+        years.forEach(year => {
+            const yearBtn = document.createElement('button');
+            yearBtn.textContent = year;
+            yearBtn.className = 'year-btn';
+            yearBtn.dataset.year = year;
+            yearSelectorContainer.appendChild(yearBtn);
+        });
+
+        // 使用事件委托来处理按钮点击
+        yearSelectorContainer.addEventListener('click', function(e) {
+            if (e.target.classList.contains('year-btn')) {
+                // 更新按钮的激活状态并重新渲染热力图
+                this.querySelectorAll('.year-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                renderHeatmap(e.target.dataset.year);
+            }
+        });
+    }
+
+    /**
+     * 初始化并管理 Tooltip 的显示/隐藏和定位
+     */
+    function initTooltip() {
+        // 使用事件委托，在父容器上监听事件
+        grid.addEventListener('mousemove', e => {
+            // 确保鼠标悬浮在有数据的格子上
+            if (e.target.classList.contains('heatmap-day') && e.target.dataset.date) {
+                const currentTarget = e.target;
+                const posts = currentTarget.dataset.posts || '0';
+                const words = currentTarget.dataset.words || '0';
+
+                // 修正时区问题，确保显示正确的本地日期
+                const dateObj = new Date(currentTarget.dataset.date);
+                const correctedDate = new Date(dateObj.valueOf() + dateObj.getTimezoneOffset() * 60 * 1000);
+                const dateText = correctedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                const titlesHTML = currentTarget.dataset.titles ? `<div class="titles">${currentTarget.dataset.titles}</div>` : '';
+
+                // 更新 tooltip 内容
+                tooltip.innerHTML = `
+                    <div class="tooltip-content">
+                        <div><strong>${posts} posts, ${words} words</strong> on ${dateText}</div>
+                        ${titlesHTML}
+                    </div>
+                `;
+
+                tooltip.style.display = 'block';
+                tooltip.classList.add('show');
+
+                // --- Tooltip 定位逻辑 ---
+                // 动态计算 tooltip 的位置，防止其超出屏幕边界
+                const tooltipRect = tooltip.getBoundingClientRect();
+                let left = e.clientX + 15;
+                let top = e.clientY;
+
+                if (left + tooltipRect.width > window.innerWidth) {
+                    left = e.clientX - tooltipRect.width - 15;
+                }
+                if (top + tooltipRect.height > window.innerHeight) {
+                    top = e.clientY - tooltipRect.height;
+                }
+
+                tooltip.style.left = `${left}px`;
+                tooltip.style.top = `${top}px`;
+            }
+        });
+
+        grid.addEventListener('mouseout', e => {
+            if (e.target.classList.contains('heatmap-day') && e.target.dataset.date) {
+                tooltip.classList.remove('show');
+                // 在过渡动画结束后再隐藏元素，避免动画被中断
+                tooltip.addEventListener('transitionend', () => {
+                    if (!tooltip.classList.contains('show')) {
+                        tooltip.style.display = 'none';
+                    }
+                }, { once: true });
+            }
+        });
+    }
+
+    // --- 初始化 ---
+    // 仅在有文章数据时才执行初始化
+    if (pages.length > 0) {
+        setupYearSelector();
+        renderHeatmap('last'); // 默认显示最近一年
+        initTooltip();
+    } else {
+        // 如果没有数据，显示提示信息
+        const container = document.getElementById('heatmap-container');
+        container.innerHTML = '<p>No contribution data to display.</p>';
+    }
+});
+</script>

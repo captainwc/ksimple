@@ -3,6 +3,8 @@
 <h1>{{ .Title | markdownify }}</h1>
 {{ .Content }}
 
+{{ partial "heatmap.html" . }}
+
 <div class="timeline-container">
     {{ $pages := where .Site.RegularPages "Section" "!=" "" }}
     {{/* 按年份对文章进行分组 */}}
