@@ -1,9 +1,19 @@
-<!-- markmap 渲染思维导图 -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // 1. 检测是否存在Markmap代码块
         const markmapBlocks = document.querySelectorAll('pre code.language-map, pre code.language-mindmap');
         if (!markmapBlocks.length) return;
+
+        // 辅助函数：加载脚本
+        function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
 
         // 2. 加载所需的markmap库
         Promise.all([
@@ -54,8 +64,32 @@
                 pre.insertAdjacentElement('afterend', container);
                 pre.remove();
 
-                // 使用markmap-lib和markmap-view渲染
+                // 使用带重试机制的渲染函数
+                renderMarkmapWithRetry(svgElement, markmapContainer, code);
+            });
+        }).catch(error => {
+            console.error('加载markmap库失败:', error);
+        });
+
+        /**
+         * 带有重试机制的Markmap渲染函数
+         * @param {HTMLElement} svgElement - 用于渲染的SVG元素
+         * @param {HTMLElement} markmapContainer - Markmap的容器元素
+         * @param {string} code - 思维导图的Markdown代码
+         * @param {number} maxRetries - 最大重试次数
+         * @param {number} delay - 每次重试的延迟（毫秒）
+         */
+        function renderMarkmapWithRetry(svgElement, markmapContainer, code, maxRetries = 5, delay = 200) {
+            let attempt = 0;
+
+            function tryRender() {
+                attempt++;
                 try {
+                    // 检查 markmap 核心对象和构造函数是否准备就绪
+                    if (!window.markmap || typeof window.markmap.Markmap !== 'function') {
+                        throw new Error('Markmap constructor not available yet.');
+                    }
+
                     // 创建Transformer实例
                     const { Transformer } = window.markmap;
                     const transformer = new Transformer();
@@ -89,31 +123,28 @@
                             link.setAttribute('rel', 'noopener noreferrer');
                         });
                     }, 100);
-                } catch (error) {
-                    console.error('Markmap渲染错误:', error);
-                    markmapContainer.innerHTML = `<div style="color:red;border:1px solid red;padding:10px;">
-                        Markmap渲染错误: ${error.message}
-                    </div>`;
-                }
-            });
-        }).catch(error => {
-            console.error('加载markmap库失败:', error);
-        });
 
-        // 辅助函数：加载脚本
-        function loadScript(url) {
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = url;
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
+                } catch (error) {
+                    console.error(`Markmap渲染尝试第 ${attempt} 次失败:`, error.message);
+                    if (attempt < maxRetries) {
+                        // 如果未达到重试上限，则在延迟后再次尝试
+                        setTimeout(tryRender, delay);
+                    } else {
+                        // 达到重试上限后，显示最终的错误信息
+                        console.error('Markmap渲染在多次重试后仍然失败。');
+                        markmapContainer.innerHTML = `<div style="color:red;border:1px solid red;padding:10px;">
+                            Markmap渲染错误: ${error.message} (请尝试手动刷新网页)
+                        </div>`;
+                    }
+                }
+            }
+
+            // 启动第一次渲染尝试
+            tryRender();
         }
     });
 </script>
 
-<!-- 扩展diagram_render_utils以支持markmap全屏 -->
 <script>
     // 扩展全屏功能以支持markmap
     document.addEventListener('DOMContentLoaded', function() {
