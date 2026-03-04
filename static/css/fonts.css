@@ -2,12 +2,12 @@
 @import url("https://static.zeoseven.com/zsft/292/main/result.css"); /* LXGW WenKai */
 
 body {
-  font-family: "华文中宋", "LXGW WenKai", Optima, Candara, Calibri, Arial, sans-serif;
-  font-size: 105%;
+  font-family: "华文中宋", sans-serif, Calibri, "LXGW WenKai", Arial, Optima, Candara;
+  font-size: 110%;
 }
 
 code {
   font-family: "Maple Mono Normal NF CN", "LXGW WenKai", "Lucida Console", Monaco, monospace;
-  font-size: 90%;
+  font-size: 85%;
   font-weight: normal;
 }

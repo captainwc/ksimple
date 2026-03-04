@@ -1,11 +1,11 @@
 body {
-    width: 60% !important;
+    width: 55% !important;
     max-width: 95% !important;
     margin: -0.5rem;
     margin-left: auto !important;
     margin-right: auto !important;
     padding: 1em;
-    line-height: 1.5;
+    line-height: 1.66;
     background-image: url('/images/background.png');
     background-position: center;
     background-size: cover;
