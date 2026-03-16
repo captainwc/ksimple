@@ -1,14 +1,14 @@
 name = "ksimple"
 license = "MIT"
 description = "A minimalist blog theme modified based on hugo-xmin and hugo-admonitions, hope you like it."
-homepage = "https://captainwc.github.io"
-demosite = "https://captainwc.github.io"
+homepage = "https://wddjwk.github.io"
+demosite = "https://wddjwk.github.io"
 tags = ["simple", "blog"]
 features = ["blog"]
 
 [author]
   name = "SHUAIKAI"
-  homepage = "https://captainwc.github.io"
+  homepage = "https://wddjwk.github.io"
 
 [module.hugoVersion]
 extended = true
