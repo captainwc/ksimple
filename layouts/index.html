@@ -68,12 +68,13 @@
         content: '';
         position: absolute;
         left: -27px;
-        top: 5px;
+        top: 50%;
         width: 10px;
         height: 10px;
         border-radius: 50%;
         background-color: #fff;
         border: 2px solid #c0c0c0;
+        transform: translateY(-50%);
         transition: background-color 0.3s ease, border-color 0.3s ease;
         z-index: 1;
     }
@@ -85,7 +86,7 @@
 
     .timeline-content {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         gap: 0.6rem;
     }
 
@@ -147,6 +148,7 @@
         .timeline-item::before {
             left: -7px;
             top: 4px;
+            transform: none;
         }
     }
 </style>
