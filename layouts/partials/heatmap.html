@@ -36,6 +36,7 @@
 
     <!-- 悬浮提示框 (Tooltip)，初始隐藏 -->
     <div id="heatmap-tooltip" class="heatmap-tooltip"></div>
+    <div id="heatmap-popover" class="heatmap-popover"></div>
 </div>
 
 <style>
@@ -117,6 +118,7 @@
     .heatmap-year-selector {
         display: flex;
         gap: 4px;
+        flex-wrap: wrap;
     }
 
     /* --- 年份选择按钮 --- */
@@ -269,40 +271,156 @@
         /* 限制最大高度，超出则滚动 */
         overflow-y: auto;
     }
+
+    .heatmap-popover {
+        position: fixed;
+        min-width: 280px;
+        max-width: min(360px, calc(100vw - 24px));
+        max-height: min(72vh, 420px);
+        padding: 14px;
+        border: 1px solid var(--ht-border);
+        border-radius: 10px;
+        background-color: var(--ht-bg);
+        color: var(--ht-main-text);
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+        z-index: 1000;
+        overflow-y: auto;
+        display: none;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .heatmap-popover.show {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .heatmap-popover .popover-date {
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .heatmap-popover .popover-meta {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--ht-secondary-text);
+    }
+
+    .heatmap-popover .popover-list {
+        list-style: none;
+        padding: 0;
+        margin: 12px 0 0;
+        display: grid;
+        gap: 0;
+    }
+
+    .heatmap-popover .popover-item {
+        margin: 0;
+        border-top: 1px solid var(--ht-border);
+    }
+
+    .heatmap-popover .popover-item:first-child {
+        border-top: none;
+    }
+
+    .heatmap-popover .popover-link {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 10px 0;
+        color: var(--ht-main-text);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .heatmap-popover .popover-link::before {
+        content: none;
+    }
+
+    .heatmap-popover .popover-link:hover {
+        opacity: 0.78;
+    }
+
+    .heatmap-popover .popover-link-title {
+        flex: 1;
+        color: #3c4654;
+        font-family: "华文中宋", sans-serif, Calibri, "LXGW WenKai", Arial, Optima, Candara;
+        font-size: 0.95rem;
+        line-height: 1.45;
+    }
+
+    body.dark .heatmap-popover .popover-link-title {
+        color: #e6edf3;
+    }
+
+    .heatmap-popover .popover-link-words {
+        flex-shrink: 0;
+        color: var(--ht-secondary-text);
+        font-size: 12px;
+        font-weight: 400;
+    }
+
+    @media (max-width: 768px) {
+        .heatmap-container {
+            padding: 12px;
+        }
+
+        .heatmap-header {
+            gap: 8px;
+        }
+
+        .heatmap-year-selector {
+            row-gap: 6px;
+        }
+
+        .year-btn {
+            padding: 3px 8px;
+        }
+
+        .heatmap-popover {
+            min-width: 0;
+            width: calc(100vw - 24px);
+            max-width: calc(100vw - 24px);
+        }
+    }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // 1. --- 数据准备 ---
         // 通过 Hugo 模板语法，在构建时将所有文章数据注入到 JS 数组中
-        {{ $pages := .Site.RegularPages }}
-        const pages = [
-            {{ range $pages }}
-                {
-                    date: "{{ .Date.Format "2006-01-02" }}",
-                    title: {{ .Title | jsonify }},
-                    word_count: {{ .WordCount }}
-                },
-            {{ end }}
-        ];
+        {{ $pages := where .Site.RegularPages.ByDate.Reverse "Section" "!=" "" }}
+        {{ $pagesData := slice }}
+        {{ range $pages }}
+            {{ $pagesData = $pagesData | append (dict
+                "date" (.Date.Format "2006-01-02")
+                "title" (.Title | markdownify | plainify)
+                "url" .RelPermalink
+                "word_count" .WordCount
+            ) }}
+        {{ end }}
+        const pages = {{ $pagesData | jsonify | safeJS }};
 
-    // 将文章数据按日期聚合，计算每天的文章数、总字数和标题列表
-    const contributions = pages.reduce((acc, page) => {
-        const date = page.date;
-        if (!acc[date]) {
-            acc[date] = { posts: 0, words: 0, titles: [] };
-        }
-        acc[date].posts += 1;
-        acc[date].words += page.word_count;
-        acc[date].titles.push(page.title);
-        return acc;
-    }, {});
+        // 将文章数据按日期聚合，计算每天的文章数、总字数和文章列表
+        const contributions = pages.reduce((acc, page) => {
+            const date = page.date;
+            if (!acc[date]) {
+                acc[date] = { posts: 0, words: 0, items: [] };
+            }
+            acc[date].posts += 1;
+            acc[date].words += page.word_count;
+            acc[date].items.push({ title: page.title, url: page.url, word_count: page.word_count });
+            return acc;
+        }, {});
 
-    // 2. --- DOM 元素获取 ---
-    const grid = document.getElementById('heatmap-grid');
-    const tooltip = document.getElementById('heatmap-tooltip');
-    const monthsContainer = document.getElementById('heatmap-months');
-    const yearSelectorContainer = document.getElementById('heatmap-year-selector');
+        // 2. --- DOM 元素获取 ---
+        const grid = document.getElementById('heatmap-grid');
+        const tooltip = document.getElementById('heatmap-tooltip');
+        const popover = document.getElementById('heatmap-popover');
+        const monthsContainer = document.getElementById('heatmap-months');
+        const yearSelectorContainer = document.getElementById('heatmap-year-selector');
 
     /**
      * 根据当天的总字数计算贡献等级
@@ -317,6 +435,58 @@
         return 0;
     }
 
+    function formatDateKey(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    function parseDateKey(dateKey) {
+        const [year, month, day] = dateKey.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    function formatLongDate(dateKey, locale = 'en-US') {
+        return parseDateKey(dateKey).toLocaleDateString(locale, {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    function stripWrappingQuotes(text) {
+        const quotePairs = [
+            ['"', '"'],
+            ["'", "'"],
+            ['“', '”'],
+            ['‘', '’'],
+            ['「', '」'],
+            ['『', '』']
+        ];
+
+        let normalized = (text || '').trim();
+        let changed = true;
+
+        while (changed && normalized.length > 1) {
+            changed = false;
+            for (const [start, end] of quotePairs) {
+                if (normalized.startsWith(start) && normalized.endsWith(end)) {
+                    normalized = normalized.slice(start.length, normalized.length - end.length).trim();
+                    changed = true;
+                    break;
+                }
+            }
+        }
+
+        return normalized;
+    }
+
+    function formatDisplayTitle(title) {
+        const normalizedTitle = stripWrappingQuotes(title);
+        return normalizedTitle ? `《${normalizedTitle}》` : '';
+    }
+
     /**
      * 渲染指定年份的热力图
      * @param {string|number} year - "last" 代表最近一年, 数字代表具体年份
@@ -325,6 +495,7 @@
         // 清空旧的网格和月份标签
         grid.innerHTML = '';
         monthsContainer.innerHTML = '';
+        hidePopover();
 
         // 根据传入的年份，计算热力图的起始和结束日期
         let startDate, endDate;
@@ -379,17 +550,18 @@
 
             // 只为在日期范围内的格子添加数据和样式
             if (dayCursor >= startDate && dayCursor <= endDate) {
-                const dateString = dayCursor.toISOString().split('T')[0];
+                const dateString = formatDateKey(dayCursor);
                 const data = contributions[dateString];
 
                 if (data) {
                     const level = getLevel(data.words);
                     dayCell.style.backgroundColor = `var(--ht-lv-${level})`;
-                    // 将数据存储在 `data-*` 属性中，供 tooltip 使用
                     dayCell.dataset.date = dateString;
-                    dayCell.dataset.posts = data.posts;
-                    dayCell.dataset.words = data.words;
-                    dayCell.dataset.titles = data.titles.map(t => `《${t}》`).join('\n');
+                    dayCell.tabIndex = 0;
+                    dayCell.setAttribute('role', 'link');
+                    dayCell.setAttribute('aria-label', `${formatLongDate(dateString)}: ${data.posts} posts, ${data.words} words`);
+                } else {
+                    dayCell.style.cursor = 'default';
                 }
             } else {
                 // 日期范围外的格子设为透明，无交互
@@ -426,7 +598,7 @@
 
         const currentYear = new Date().getFullYear();
         // 从所有文章中提取出唯一的年份
-        const yearsSet = new Set(pages.map(p => new Date(p.date).getFullYear()));
+        const yearsSet = new Set(pages.map(p => Number.parseInt(p.date.slice(0, 4), 10)));
 
         // 过滤掉无效年份和当年，并降序排列
         const years = Array.from(yearsSet)
@@ -464,61 +636,261 @@
      * 初始化并管理 Tooltip 的显示/隐藏和定位
      */
     function initTooltip() {
-        // 使用事件委托，在父容器上监听事件
+        function hideTooltip() {
+            if (tooltip.style.display === 'none' || !tooltip.classList.contains('show')) {
+                tooltip.style.display = 'none';
+                return;
+            }
+
+            tooltip.classList.remove('show');
+            tooltip.addEventListener('transitionend', () => {
+                if (!tooltip.classList.contains('show')) {
+                    tooltip.style.display = 'none';
+                }
+            }, { once: true });
+        }
+
+        function positionTooltip(event) {
+            const tooltipRect = tooltip.getBoundingClientRect();
+            let left = event.clientX + 15;
+            let top = event.clientY;
+
+            if (left + tooltipRect.width > window.innerWidth) {
+                left = event.clientX - tooltipRect.width - 15;
+            }
+            if (top + tooltipRect.height > window.innerHeight) {
+                top = event.clientY - tooltipRect.height;
+            }
+
+            tooltip.style.left = `${left}px`;
+            tooltip.style.top = `${top}px`;
+        }
+
+        function renderTooltip(dateKey) {
+            const data = contributions[dateKey];
+            if (!data) {
+                hideTooltip();
+                return;
+            }
+
+            const tooltipContent = document.createElement('div');
+            tooltipContent.className = 'tooltip-content';
+
+            const summary = document.createElement('div');
+            const strong = document.createElement('strong');
+            strong.textContent = `${data.posts} posts, ${data.words} words`;
+            summary.appendChild(strong);
+            summary.append(` on ${formatLongDate(dateKey)}`);
+            tooltipContent.appendChild(summary);
+
+            if (data.items.length > 0) {
+                const titles = document.createElement('div');
+                titles.className = 'titles';
+
+                data.items.forEach(item => {
+                    const line = document.createElement('div');
+                    line.textContent = formatDisplayTitle(item.title);
+                    titles.appendChild(line);
+                });
+
+                tooltipContent.appendChild(titles);
+            }
+
+            tooltip.replaceChildren(tooltipContent);
+        }
+
+        grid.addEventListener('mouseover', e => {
+            const target = e.target.closest('.heatmap-day');
+            if (!target || !target.dataset.date) {
+                return;
+            }
+
+            renderTooltip(target.dataset.date);
+            tooltip.style.display = 'block';
+            positionTooltip(e);
+            requestAnimationFrame(() => tooltip.classList.add('show'));
+        });
+
         grid.addEventListener('mousemove', e => {
-            // 确保鼠标悬浮在有数据的格子上
-            if (e.target.classList.contains('heatmap-day') && e.target.dataset.date) {
-                const currentTarget = e.target;
-                const posts = currentTarget.dataset.posts || '0';
-                const words = currentTarget.dataset.words || '0';
-
-                // 修正时区问题，确保显示正确的本地日期
-                const dateObj = new Date(currentTarget.dataset.date);
-                const correctedDate = new Date(dateObj.valueOf() + dateObj.getTimezoneOffset() * 60 * 1000);
-                const dateText = correctedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-                const titlesHTML = currentTarget.dataset.titles ? `<div class="titles">${currentTarget.dataset.titles}</div>` : '';
-
-                // 更新 tooltip 内容
-                tooltip.innerHTML = `
-                    <div class="tooltip-content">
-                        <div><strong>${posts} posts, ${words} words</strong> on ${dateText}</div>
-                        ${titlesHTML}
-                    </div>
-                `;
-
-                tooltip.style.display = 'block';
-                tooltip.classList.add('show');
-
-                // --- Tooltip 定位逻辑 ---
-                // 动态计算 tooltip 的位置，防止其超出屏幕边界
-                const tooltipRect = tooltip.getBoundingClientRect();
-                let left = e.clientX + 15;
-                let top = e.clientY;
-
-                if (left + tooltipRect.width > window.innerWidth) {
-                    left = e.clientX - tooltipRect.width - 15;
-                }
-                if (top + tooltipRect.height > window.innerHeight) {
-                    top = e.clientY - tooltipRect.height;
-                }
-
-                tooltip.style.left = `${left}px`;
-                tooltip.style.top = `${top}px`;
+            const target = e.target.closest('.heatmap-day');
+            if (!target || !target.dataset.date) {
+                hideTooltip();
+                return;
             }
+
+            positionTooltip(e);
         });
 
-        grid.addEventListener('mouseout', e => {
-            if (e.target.classList.contains('heatmap-day') && e.target.dataset.date) {
-                tooltip.classList.remove('show');
-                // 在过渡动画结束后再隐藏元素，避免动画被中断
-                tooltip.addEventListener('transitionend', () => {
-                    if (!tooltip.classList.contains('show')) {
-                        tooltip.style.display = 'none';
-                    }
-                }, { once: true });
+        grid.addEventListener('mouseleave', hideTooltip);
+    }
+
+    function hidePopover() {
+        if (popover.style.display === 'none' || !popover.classList.contains('show')) {
+            popover.style.display = 'none';
+            return;
+        }
+
+        popover.classList.remove('show');
+        popover.addEventListener('transitionend', () => {
+            if (!popover.classList.contains('show')) {
+                popover.style.display = 'none';
+                popover.replaceChildren();
+                delete popover.dataset.date;
+            }
+        }, { once: true });
+    }
+
+    function positionPopover(target) {
+        const targetRect = target.getBoundingClientRect();
+        const popoverRect = popover.getBoundingClientRect();
+        let left = targetRect.right + 16;
+        let top = targetRect.top - 4;
+
+        if (window.innerWidth <= 640) {
+            left = 12;
+            top = targetRect.bottom + 12;
+
+            if (top + popoverRect.height > window.innerHeight - 12) {
+                top = Math.max(12, window.innerHeight - popoverRect.height - 12);
+            }
+
+            popover.style.left = `${left}px`;
+            popover.style.top = `${top}px`;
+            return;
+        }
+
+        if (left + popoverRect.width > window.innerWidth - 12) {
+            left = Math.max(12, targetRect.left - popoverRect.width - 16);
+        }
+        if (top + popoverRect.height > window.innerHeight - 12) {
+            top = Math.max(12, window.innerHeight - popoverRect.height - 12);
+        }
+        if (top < 12) {
+            top = 12;
+        }
+
+        popover.style.left = `${left}px`;
+        popover.style.top = `${top}px`;
+    }
+
+    function openPopover(dateKey, target) {
+        const data = contributions[dateKey];
+        if (!data || data.items.length <= 1) {
+            hidePopover();
+            return;
+        }
+
+        if (popover.classList.contains('show') && popover.dataset.date === dateKey) {
+            hidePopover();
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        const dateElement = document.createElement('div');
+        dateElement.className = 'popover-date';
+        dateElement.textContent = formatLongDate(dateKey, 'zh-CN');
+        fragment.appendChild(dateElement);
+
+        const metaElement = document.createElement('div');
+        metaElement.className = 'popover-meta';
+        metaElement.textContent = `当天共 ${data.posts} 篇文章，累计 ${data.words} 字。`;
+        fragment.appendChild(metaElement);
+
+        const list = document.createElement('ul');
+        list.className = 'popover-list';
+
+        data.items.forEach(item => {
+            const listItem = document.createElement('li');
+            listItem.className = 'popover-item';
+
+            const link = document.createElement('a');
+            link.className = 'popover-link';
+            link.href = item.url;
+
+            const title = document.createElement('span');
+            title.className = 'popover-link-title';
+            title.textContent = formatDisplayTitle(item.title);
+
+            const words = document.createElement('span');
+            words.className = 'popover-link-words';
+            words.textContent = `${item.word_count} 字`;
+
+            link.appendChild(title);
+            link.appendChild(words);
+
+            listItem.appendChild(link);
+            list.appendChild(listItem);
+        });
+
+        fragment.appendChild(list);
+
+        popover.replaceChildren(fragment);
+        popover.dataset.date = dateKey;
+        popover.style.display = 'block';
+        positionPopover(target);
+        requestAnimationFrame(() => popover.classList.add('show'));
+    }
+
+    function initNavigation() {
+        function getDateKeyFromEvent(event) {
+            const target = event.target.closest('.heatmap-day');
+            if (!target || !target.dataset.date) {
+                return null;
+            }
+            return {
+                dateKey: target.dataset.date,
+                target
+            };
+        }
+
+        function navigateToDate(dateKey, target) {
+            const data = contributions[dateKey];
+            if (!data || data.items.length === 0) {
+                return;
+            }
+
+            tooltip.classList.remove('show');
+            tooltip.style.display = 'none';
+
+            if (data.items.length === 1) {
+                hidePopover();
+                window.location.href = data.items[0].url;
+                return;
+            }
+
+            openPopover(dateKey, target);
+        }
+
+        grid.addEventListener('click', e => {
+            const eventTarget = getDateKeyFromEvent(e);
+            if (!eventTarget) {
+                return;
+            }
+
+            e.stopPropagation();
+            navigateToDate(eventTarget.dateKey, eventTarget.target);
+        });
+
+        grid.addEventListener('keydown', e => {
+            const eventTarget = getDateKeyFromEvent(e);
+            if (!eventTarget || (e.key !== 'Enter' && e.key !== ' ')) {
+                return;
+            }
+
+            e.preventDefault();
+            navigateToDate(eventTarget.dateKey, eventTarget.target);
+        });
+
+        popover.addEventListener('click', e => e.stopPropagation());
+        document.addEventListener('click', hidePopover);
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                hidePopover();
             }
         });
+        window.addEventListener('resize', hidePopover);
+        window.addEventListener('scroll', hidePopover, true);
     }
 
     // --- 初始化 ---
@@ -527,6 +899,7 @@
         setupYearSelector();
         renderHeatmap('last'); // 默认显示最近一年
         initTooltip();
+        initNavigation();
     } else {
         // 如果没有数据，显示提示信息
         const container = document.getElementById('heatmap-container');
