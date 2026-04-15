@@ -23,6 +23,26 @@
   {{ partial "xmind_render.html" . }}
   {{ partial "kroki_graph_render.html" . }}
 
+  <script type="application/json" class="search-index">
+  {{ $pages := where site.RegularPages "Type" "posts" }}
+  {{ if eq (len $pages) 0 }}
+    {{ $pages = where site.RegularPages "Section" "!=" "" }}
+  {{ end }}
+  [
+    {{ range $index, $page := $pages }}
+    {{ if $index }},{{ end }}
+    {
+      "title": {{ $page.Title | jsonify }},
+      "permalink": {{ $page.RelPermalink | jsonify }},
+      "content": {{ $page.Plain | jsonify }},
+      "categories": {{ if $page.Params.categories }}{{ $page.Params.categories | jsonify }}{{ else }}[]{{ end }},
+      "tags": {{ if $page.Params.tags }}{{ $page.Params.tags | jsonify }}{{ else }}[]{{ end }},
+      "series": {{ if $page.Params.series }}{{ $page.Params.series | jsonify }}{{ else }}[]{{ end }},
+      "date": {{ $page.Date.Format "2006-01-02" | jsonify }}
+    }
+    {{ end }}
+  ]
+</script>
   {{ partial "search_modal.html" . }}
 
   {{ if .Site.Params.ksimpleUseLocalPageNote }}

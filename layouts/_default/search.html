@@ -1,4 +1,3 @@
-<!-- 这里使用 partial header.html 的话，会与 search_moda.html 冲突导致不显示结果 -->
 <!DOCTYPE html>
 <html lang="{{ .Site.LanguageCode }}">
   <head>
@@ -20,7 +19,28 @@
     <hr/>
     </nav>
 
-<p style="margin: 1.8rem 0 -1rem 0; color: #191919;">可以根据标题、分类、标签、系列等条目检索本站文章</p>
+<script type="application/json" class="search-index">
+  {{ $pages := where site.RegularPages "Type" "posts" }}
+  {{ if eq (len $pages) 0 }}
+    {{ $pages = where site.RegularPages "Section" "!=" "" }}
+  {{ end }}
+  [
+    {{ range $index, $page := $pages }}
+    {{ if $index }},{{ end }}
+    {
+      "title": {{ $page.Title | jsonify }},
+      "permalink": {{ $page.RelPermalink | jsonify }},
+      "content": {{ $page.Plain | jsonify }},
+      "categories": {{ if $page.Params.categories }}{{ $page.Params.categories | jsonify }}{{ else }}[]{{ end }},
+      "tags": {{ if $page.Params.tags }}{{ $page.Params.tags | jsonify }}{{ else }}[]{{ end }},
+      "series": {{ if $page.Params.series }}{{ $page.Params.series | jsonify }}{{ else }}[]{{ end }},
+      "date": {{ $page.Date.Format "2006-01-02" | jsonify }}
+    }
+    {{ end }}
+  ]
+</script>
+
+<p style="margin: 1.8rem 0 -1rem 0; color: #191919;" id="search-hint">可以根据标题、分类、标签、系列等条目检索本站文章 | 快捷键: Ctrl+K / Ctrl+Shift+F</p>
 
 <div class="search-container">
   <input type="text" id="search-input" placeholder="输入关键词搜索..." aria-label="搜索框" autocomplete="off">
@@ -28,94 +48,61 @@
   <div id="search-results"></div>
 </div>
 
-<!-- 加载Fuse.js搜索库 -->
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
-<!-- 加载搜索索引和搜索逻辑 -->
 <script>
-  // 调试辅助函数
+(function() {
   function debug(text) {
     document.getElementById('search-debug').textContent = text;
   }
+  function showpages() {
+    debug("当前本站共有 " + window.searchIndex.length + " 篇文章");
+  }
+  window.showpages = showpages;
 
-  // 获取所有文章数据
-  let searchIndex = [];
-
-  // 使用Hugo的数据模板生成搜索索引
-  {{ $pages := where site.RegularPages "Type" "posts" }}
-  {{ if eq (len $pages) 0 }}
-    {{ $pages = where site.RegularPages "Section" "!=" "" }}
-  {{ end }}
-
-  debug("索引初始化中...");
-
-  {{ range $pages }}
-    searchIndex.push({
-      title: {{ .Title | jsonify }},
-      permalink: {{ .RelPermalink | jsonify }},
-      content: {{ .Plain | jsonify }},
-      categories: {{ if .Params.categories }}{{ .Params.categories | jsonify }}{{ else }}[]{{ end }},
-      tags: {{ if .Params.tags }}{{ .Params.tags | jsonify }}{{ else }}[]{{ end }},
-      series: {{ if .Params.series }}{{ .Params.series | jsonify }}{{ else }}[]{{ end }},
-      date: {{ .Date.Format "2006-01-02" | jsonify }}
-    });
-  {{ end }}
-
-  debug("当前本站共有 " + searchIndex.length + " 篇文章");
-  console.log("搜索索引:", searchIndex);
-
-  // 配置Fuse.js搜索选项
-  const options = {
-    includeScore: true,
-    threshold: 0.6, // 提高阈值，使搜索更宽松
-    keys: [
-      { name: 'title', weight: 0.7 },
-      { name: 'content', weight: 0.3 },
-      { name: 'tags', weight: 0.5 },
-      { name: 'categories', weight: 0.5 },
-      { name: 'series', weight: 0.5 }
-    ]
-  };
-
-  // 初始化Fuse搜索实例
-  const fuse = new Fuse(searchIndex, options);
-
-  document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-      document.getElementById('search-input').value = "";
-      var res = document.getElementById('search-results');
-      while (res.firstChild) {
-        res.removeChild(res.firstChild);
-      }
-      debug("当前本站共有 " + searchIndex.length + " 篇文章");
-      document.getElementById('search-input').focus();
+  function initSearchIndex() {
+    const pages = document.querySelectorAll('script[type="application/json"].search-index');
+    if (pages.length === 0) return;
+    try {
+      window.searchIndex = JSON.parse(pages[0].textContent);
+    } catch(e) {
+      console.error('Failed to parse search index:', e);
+      window.searchIndex = [];
     }
-  });
+  }
 
-  // 监听搜索框输入
-  document.getElementById('search-input').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.trim();
-    const resultsContainer = document.getElementById('search-results');
+  function highlightMatch(text, query) {
+    if (!query || !text) return text;
+    const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
 
-    // 清空搜索结果
+  function searchAndRender(searchTerm, resultsContainer) {
     resultsContainer.innerHTML = '';
-
     if (searchTerm === '') {
-        debug("当前本站共有 " + searchIndex.length + " 篇文章");
+      showpages();
       return;
     }
 
-    debug("搜索词: '" + searchTerm + "'");
+    const results = window.fuse.search(searchTerm);
 
-    // 执行搜索
-    const results = fuse.search(searchTerm);
-    debug("找到 " + results.length + " 条结果");
-    console.log("搜索结果:", results);
+    results.sort((a, b) => {
+      const scoreA = a.score || 1;
+      const scoreB = b.score || 1;
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      const titleMatchA = (a.item.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const titleMatchB = (b.item.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+      if (titleMatchA !== titleMatchB) return titleMatchA ? -1 : 1;
+      return new Date(b.item.date) - new Date(a.item.date);
+    });
 
     if (results.length === 0) {
+      showpages();
       resultsContainer.innerHTML = '<p>没有找到相关文章</p>';
       return;
     }
+
+    debug("共找到 " + results.length + " 篇匹配的文章");
 
     results.forEach(result => {
       const item = result.item;
@@ -128,18 +115,81 @@
 
       const link = document.createElement('a');
       link.href = item.permalink.replace(/^"|"$/g, '');
-      link.textContent = item.title.replace(/^"|"$/g, '');
+      link.innerHTML = highlightMatch(item.title.replace(/^"|"$/g, ''), searchTerm);
       link.className = 'search-result-title';
 
       resultItem.appendChild(date);
       resultItem.appendChild(link);
       resultsContainer.appendChild(resultItem);
     });
-  });
+  }
+
+  window.initSearchIndex = initSearchIndex;
+  window.searchAndRender = searchAndRender;
+  window.highlightMatch = highlightMatch;
+
+  const options = {
+    includeScore: true,
+    threshold: 0.4,
+    keys: [
+      { name: 'title', weight: 0.7 },
+      { name: 'tags', weight: 0.5 },
+      { name: 'categories', weight: 0.5 },
+      { name: 'series', weight: 0.5 },
+      { name: 'content', weight: 0.3 }
+    ]
+  };
+
+  function toggleSearchModal() {
+    const input = document.getElementById('search-input');
+    input.focus();
+  }
+  window.toggleSearchModal = toggleSearchModal;
+
+  function setupKeyboardHandler() {
+    document.addEventListener('keydown', function(event) {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'F') {
+        event.preventDefault();
+        toggleSearchModal();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        toggleSearchModal();
+      } else if (event.key === 'Escape') {
+        document.getElementById('search-input').value = "";
+        var res = document.getElementById('search-results');
+        while (res.firstChild) {
+          res.removeChild(res.firstChild);
+        }
+        showpages();
+        document.getElementById('search-input').focus();
+      }
+    }, true);
+  }
+
+  function initSearch() {
+    initSearchIndex();
+    if (window.searchIndex && window.searchIndex.length > 0) {
+      window.fuse = new Fuse(window.searchIndex, options);
+      showpages();
+    }
+    setupKeyboardHandler();
+
+    document.getElementById('search-input').addEventListener('input', function(e) {
+      const searchTerm = e.target.value.trim();
+      const resultsContainer = document.getElementById('search-results');
+      searchAndRender(searchTerm, resultsContainer);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
+})();
 </script>
 
 <style>
-/* 搜索页面搜索框样式 */
 .search-container {
     margin: 2rem 0;
     text-align: left;
@@ -183,6 +233,13 @@
 
 .search-result-title:hover {
     text-decoration: underline;
+}
+
+.search-result-title mark {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0 2px;
+    border-radius: 2px;
 }
 </style>
 

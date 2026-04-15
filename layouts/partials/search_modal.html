@@ -4,101 +4,61 @@
   <div id="modal-search-results"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
 <script>
+(function() {
   function debug(text) {
       document.getElementById('modal-search-debug').textContent = text;
   }
   function showpages() {
-    debug("当前本站共有 " + searchIndex.length + " 篇文章");
+    debug("当前本站共有 " + window.searchIndex.length + " 篇文章");
   }
+  window.showpages = showpages;
 
-  let searchIndex = [];
-  {{ $pages := where site.RegularPages "Type" "posts" }}
-  {{ if eq (len $pages) 0 }}
-    {{ $pages = where site.RegularPages "Section" "!=" "" }}
-  {{ end }}
-
-  {{ range $pages }}
-    searchIndex.push({
-      title: {{ .Title | jsonify }},
-      permalink: {{ .RelPermalink | jsonify }},
-      // content: {{ .Plain | jsonify }},
-      categories: {{ if .Params.categories }}{{ .Params.categories | jsonify }}{{ else }}[]{{ end }},
-      tags: {{ if .Params.tags }}{{ .Params.tags | jsonify }}{{ else }}[]{{ end }},
-      series: {{ if .Params.series }}{{ .Params.series | jsonify }}{{ else }}[]{{ end }},
-      date: {{ .Date.Format "2006-01-02" | jsonify }}
-    });
-  {{ end }}
-
-  showpages()
-
-  const options = {
-    includeScore: true,
-    threshold: 0.6,
-    keys: [
-      { name: 'title', weight: 0.7 },
-      { name: 'content', weight: 0.3 },
-      { name: 'tags', weight: 0.5 },
-      { name: 'categories', weight: 0.5 },
-      { name: 'series', weight: 0.5 }
-    ]
-  };
-
-  const fuse = new Fuse(searchIndex, options);
-
-  document.addEventListener('keydown', function(event) {
-    if (event.ctrlKey && event.key === 'k') {
-      event.preventDefault();
-      toggleSearchModal();
-    } else if (event.key === 'Escape') {
-      document.getElementById('modal-search-input').value = "";
-      closeSearchModal();
-      var res = document.getElementById('modal-search-results');
-      while (res.firstChild) {
-        res.removeChild(res.firstChild);
-      }
-      showpages();
-    }
-  });
-
-  function toggleSearchModal() {
-    const modal = document.getElementById('search-modal');
-    if (modal.style.display === 'none') {
-      modal.style.display = 'block';
-      document.getElementById('modal-search-input').focus();
-    } else {
-      modal.style.display = 'none';
+  function initSearchIndex() {
+    const pages = document.querySelectorAll('script[type="application/json"].search-index');
+    if (pages.length === 0) return;
+    try {
+      window.searchIndex = JSON.parse(pages[0].textContent);
+    } catch(e) {
+      console.error('Failed to parse search index:', e);
+      window.searchIndex = [];
     }
   }
 
-  function closeSearchModal() {
-    const modal = document.getElementById('search-modal');
-    modal.style.display = 'none';
+  function highlightMatch(text, query) {
+    if (!query || !text) return text;
+    const regex = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
   }
 
-  document.getElementById('modal-search-input').addEventListener('input', function(e) {
-    const searchTerm = e.target.value.trim();
-    const resultsContainer = document.getElementById('modal-search-results');
+  function searchAndRender(searchTerm, resultsContainer, options) {
     resultsContainer.innerHTML = '';
-
     if (searchTerm === '') {
-      showpages()
+      showpages();
       return;
     }
 
-    const results = fuse.search(searchTerm);
+    const results = window.fuse.search(searchTerm);
 
-    results.sort((a, b) => new Date(b.item.date) - new Date(a.item.date));
+    results.sort((a, b) => {
+      const scoreA = a.score || 1;
+      const scoreB = b.score || 1;
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      const titleMatchA = (a.item.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const titleMatchB = (b.item.title || '').toLowerCase().includes(searchTerm.toLowerCase());
+      if (titleMatchA !== titleMatchB) return titleMatchA ? -1 : 1;
+      return new Date(b.item.date) - new Date(a.item.date);
+    });
 
     if (results.length === 0) {
-      showpages()
+      showpages();
       resultsContainer.innerHTML = '<p>没有找到相关文章</p>';
       return;
-    } else {
-      debug("共找到 " + results.length + " 篇匹配的文章")
     }
+
+    debug("共找到 " + results.length + " 篇匹配的文章");
 
     results.forEach(result => {
       const item = result.item;
@@ -111,14 +71,91 @@
 
       const link = document.createElement('a');
       link.href = item.permalink.replace(/^"|"$/g, '');
-      link.textContent = item.title.replace(/^"|"$/g, '');
+      link.innerHTML = highlightMatch(item.title.replace(/^"|"$/g, ''), searchTerm);
       link.className = 'modal-search-result-title';
 
       resultItem.appendChild(date);
       resultItem.appendChild(link);
       resultsContainer.appendChild(resultItem);
     });
-  });
+  }
+
+  window.initSearchIndex = initSearchIndex;
+  window.searchAndRender = searchAndRender;
+  window.highlightMatch = highlightMatch;
+
+  const options = {
+    includeScore: true,
+    threshold: 0.4,
+    keys: [
+      { name: 'title', weight: 0.7 },
+      { name: 'tags', weight: 0.5 },
+      { name: 'categories', weight: 0.5 },
+      { name: 'series', weight: 0.5 },
+      { name: 'content', weight: 0.3 }
+    ]
+  };
+
+  function setupKeyboardHandler() {
+    document.addEventListener('keydown', function(event) {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'F') {
+        event.preventDefault();
+        toggleSearchModal();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        toggleSearchModal();
+      } else if (event.key === 'Escape') {
+        document.getElementById('modal-search-input').value = "";
+        closeSearchModal();
+        var res = document.getElementById('modal-search-results');
+        while (res.firstChild) {
+          res.removeChild(res.firstChild);
+        }
+        showpages();
+      }
+    }, true);
+  }
+
+  function toggleSearchModal() {
+    const modal = document.getElementById('search-modal');
+    if (modal.style.display === 'none' || modal.style.display === '') {
+      modal.style.display = 'block';
+      setTimeout(function() {
+        document.getElementById('modal-search-input').focus();
+      }, 10);
+    } else {
+      modal.style.display = 'none';
+    }
+  }
+  window.toggleSearchModal = toggleSearchModal;
+
+  function closeSearchModal() {
+    const modal = document.getElementById('search-modal');
+    modal.style.display = 'none';
+  }
+  window.closeSearchModal = closeSearchModal;
+
+  function initSearch() {
+    initSearchIndex();
+    if (window.searchIndex && window.searchIndex.length > 0) {
+      window.fuse = new Fuse(window.searchIndex, options);
+      showpages();
+    }
+    setupKeyboardHandler();
+
+    document.getElementById('modal-search-input').addEventListener('input', function(e) {
+      const searchTerm = e.target.value.trim();
+      const resultsContainer = document.getElementById('modal-search-results');
+      searchAndRender(searchTerm, resultsContainer);
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
+})();
 </script>
 
 <style>
@@ -178,5 +215,12 @@
 
 .modal-search-result-title:hover {
     text-decoration: underline;
+}
+
+.modal-search-result-title mark {
+    background-color: #fff3cd;
+    color: #856404;
+    padding: 0 2px;
+    border-radius: 2px;
 }
 </style>
