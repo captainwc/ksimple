@@ -1,15 +1,18 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 body {
     width: 55% !important;
     max-width: 95% !important;
-    margin: -0.5rem;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    margin: 0 auto !important;
     padding: 1em;
     line-height: 1.66;
     background-image: url('/images/background.png');
     background-position: center;
     background-size: cover;
     background-attachment: fixed;
+    overflow-x: hidden;
 }
 
 /* ================= 强制换行 ================= */
@@ -141,9 +144,10 @@ pre {
     border: 1px solid #ddd;
     border-radius: 6px;
     overflow-x: auto;
+    overflow-y: hidden;
     position: relative;
-    overflow: hidden;
     transition: max-height 0.3s ease-out;
+    max-width: 100%;
 }
 
 /* 嵌入代码块 */
@@ -226,6 +230,9 @@ table {
     margin: auto;
     border-top: 1px solid #666;
     border-bottom: 1px solid #666;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
 }
 
 table thead th {
@@ -341,25 +348,55 @@ h6::before {
     content: counter(section2) "." counter(section3) "." counter(section4) "." counter(section5) "." counter(section6);
 }
 
+/* ================= 1080P 屏幕（≤1920px）=================  */
+@media (max-width: 1920px) {
+    body {
+        width: 65% !important;
+    }
+}
+
+/* ================= 小笔记本（≤1440px）=================  */
+@media (max-width: 1440px) {
+    body {
+        width: 75% !important;
+    }
+}
+
+/* ================= 平板（≤1024px）=================  */
+@media (max-width: 1024px) {
+    body {
+        width: 85% !important;
+    }
+}
+
 /* ================= 手机端（< 768px）=================  */
 @media (max-width: 768px) {
     body {
-        width: 90% !important;
+        width: 92% !important;
         max-width: 100% !important;
         font-size: 100% !important;
         background-image: none !important;
+        padding: 0.5em;
+    }
+
+    /* 阻止任何子元素溢出 */
+    main, .timeline-container, .search-container, .terms-container {
+        max-width: 100%;
+        overflow-x: hidden;
     }
 
     .archieve-right-section {
         margin-left: 0;
         width: 100%;
-        justify-content: flex-end;
-        margin-top: 0.5rem;
+        justify-content: flex-start;
+        margin-top: 0.3rem;
         align-items: center;
     }
 
     .archieve-list-item {
         margin-left: -1.2rem;
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .code-rendered-diagram {
@@ -374,7 +411,7 @@ h6::before {
 
     /* 搜索框样式调整 */
     #search-input {
-        width: 90% !important;
+        width: 100% !important;
         padding: 0.8rem;
         font-size: 1rem;
         border: 1px solid #ddd;
@@ -385,6 +422,7 @@ h6::before {
     /* tags词云调整 */
     #tag-cloud-canvas {
         width: 100% !important;
+        height: auto !important;
         margin: 0 auto;
         padding: 0;
         transform-origin: center;
@@ -394,5 +432,49 @@ h6::before {
     .toc-panel {
         max-width: 260px !important;
         max-height: 70vh !important;
+    }
+
+    /* 文章meta信息 */
+    .article-meta-info {
+        font-size: 0.95rem;
+        word-break: break-all;
+    }
+
+    .article-meta-title {
+        font-size: 1.6rem !important;
+    }
+
+    /* 搜索结果移动端布局 */
+    .search-result-item,
+    .modal-search-result-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+    }
+
+    /* 404页面 */
+    .not-found-title {
+        font-size: 6rem;
+    }
+
+    /* 导航菜单 */
+    .menu a {
+        padding: 3px 4px;
+        font-size: 0.9rem;
+    }
+
+    .menu li {
+        margin: 2px;
+    }
+
+    /* 嵌入代码块 */
+    code {
+        font-size: 0.9rem;
+        word-break: break-all;
+    }
+
+    /* 内联图片 */
+    img {
+        height: auto !important;
     }
 }
